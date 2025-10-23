@@ -1,0 +1,311 @@
+openapi: 3.0.3
+info:
+  title: Subscription Manager API
+  version: 1.0.0
+  description: |
+    API for managing user subscriptions and calculating monthly spending summaries.
+servers:
+  - url: http://localhost:8081
+paths:
+  /api/v1/subscriptions:
+    post:
+      tags: [Subscriptions]
+      summary: Create a new subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Invalid input data
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Unexpected server error
+          content:
+            text/plain:
+              schema:
+                type: string
+    get:
+      tags: [Subscriptions]
+      summary: List subscriptions
+      parameters:
+        - $ref: '#/components/parameters/UserIDQuery'
+        - $ref: '#/components/parameters/ServiceNameQuery'
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            description: Filter by start month from (inclusive)
+            example: 07-2025
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            description: Filter by start month to (inclusive)
+            example: 12-2025
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 0
+            example: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            example: 0
+      responses:
+        '200':
+          description: List of subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Invalid query parameters
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Unexpected server error
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/v1/subscriptions/{id}:
+    get:
+      tags: [Subscriptions]
+      summary: Get subscription by ID
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionID'
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Invalid subscription ID
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Subscription not found
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Unexpected server error
+          content:
+            text/plain:
+              schema:
+                type: string
+    put:
+      tags: [Subscriptions]
+      summary: Update subscription
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpdateRequest'
+      responses:
+        '200':
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Invalid input data
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Subscription not found
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Unexpected server error
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      tags: [Subscriptions]
+      summary: Delete subscription
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionID'
+      responses:
+        '204':
+          description: Subscription deleted
+        '400':
+          description: Invalid subscription ID
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Subscription not found
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Unexpected server error
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/v1/subscriptions/summary:
+    get:
+      tags: [Summary]
+      summary: Calculate total subscription cost for a period
+      parameters:
+        - $ref: '#/components/parameters/PeriodStart'
+        - $ref: '#/components/parameters/PeriodEnd'
+        - $ref: '#/components/parameters/UserIDQuery'
+        - $ref: '#/components/parameters/ServiceNameQuery'
+      responses:
+        '200':
+          description: Total cost for the period
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    description: Sum of subscription costs for the requested period
+                    example: 1200
+        '400':
+          description: Invalid query parameters
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Unexpected server error
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  parameters:
+    SubscriptionID:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Identifier of the subscription
+    UserIDQuery:
+      in: query
+      name: user_id
+      schema:
+        type: string
+        format: uuid
+      description: Filter by user identifier
+    ServiceNameQuery:
+      in: query
+      name: service_name
+      schema:
+        type: string
+      description: Filter by subscription service name
+    PeriodStart:
+      in: query
+      name: start_date
+      required: true
+      schema:
+        type: string
+        description: Start of the period in MM-YYYY format
+        example: 01-2025
+    PeriodEnd:
+      in: query
+      name: end_date
+      required: true
+      schema:
+        type: string
+        description: End of the period in MM-YYYY format
+        example: 12-2025
+  schemas:
+    Subscription:
+      type: object
+      required: [id, service_name, price, user_id, start_date]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 60601fee-2bf1-4721-ae6f-7636e79a0cba
+        service_name:
+          type: string
+          example: Yandex Plus
+        price:
+          type: integer
+          format: int32
+          example: 400
+        user_id:
+          type: string
+          format: uuid
+          example: 60601fee-2bf1-4721-ae6f-7636e79a0cba
+        start_date:
+          type: string
+          description: Month when the subscription started (MM-YYYY)
+          example: 07-2025
+        end_date:
+          type: string
+          nullable: true
+          description: Month when the subscription ended (MM-YYYY)
+          example: 12-2025
+    SubscriptionCreateRequest:
+      type: object
+      required: [service_name, price, user_id, start_date]
+      properties:
+        service_name:
+          type: string
+          example: Yandex Plus
+        price:
+          type: integer
+          format: int32
+          example: 400
+        user_id:
+          type: string
+          format: uuid
+          example: 60601fee-2bf1-4721-ae6f-7636e79a0cba
+        start_date:
+          type: string
+          description: Start month in MM-YYYY format
+          example: 07-2025
+        end_date:
+          type: string
+          nullable: true
+          description: End month in MM-YYYY format
+          example: 12-2025
+    SubscriptionUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/SubscriptionCreateRequest'
+      description: Payload used to update an existing subscription

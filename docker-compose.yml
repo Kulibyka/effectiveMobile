@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: subscriptions
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d subscriptions"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  migrator:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      CONFIG_PATH: /app/config/docker.yaml
+      MIGRATIONS_PATH: /app/migrations
+    command: ["./migrator"]
+    restart: "no"
+
+  app:
+    build: .
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    ports:
+      - "8081:8081"
+    environment:
+      CONFIG_PATH: /app/config/docker.yaml
+    restart: unless-stopped
+
+volumes:
+  db_data:
